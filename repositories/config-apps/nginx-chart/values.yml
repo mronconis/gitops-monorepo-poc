@@ -1,0 +1,6 @@
+name: nginx
+env: test
+suite: gda
+cluster: demo
+
+replicas: 1

@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applications-app-set
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/mronconis/gitops-monorepo-poc.git
+        revision: main
+        files:
+          - path: repositories/app-of-apps/clusters/*/*/*/apps/*.yml
+        # 3: cluster
+        # 4: suite
+        # 5: env
+  template:
+    metadata:
+      name: '{{ .application.name }}-{{ index .path.segments 4 }}-{{ index .path.segments 5 }}-{{ index .path.segments 3 }}'
+      labels:
+        app: '{{ .application.name }}'
+        env: '{{ index .path.segments 5 }}'
+        suite: '{{ index .path.segments 4 }}'
+        cluster: '{{ index .path.segments 3 }}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      destination:
+        name: 'in-cluster' # Static value only for test, the final value have cluster name added to ArgoCD clusters defintion.
+        namespace: '{{ index .path.segments 4 }}-{{ index .path.segments 5 }}'
+      sources:  
+        - repoURL: "{{ .application.helm.chart.repoURL }}"
+          targetRevision: "{{ .application.helm.chart.targetRevision }}"
+          path: "{{ .application.helm.chart.path }}"
+          helm:
+            ignoreMissingValueFiles: false
+            valueFiles: # Application time
+              - $values/repositories/config-apps/nginx-chart/values.yml
+              - $values/repositories/config-apps/nginx-chart/values-{{ index .path.segments 5 }}.yml
+              - ../../app-of-apps/clusters/{{ index .path.segments 3 }}/cluster-conf.yml
+              - ../../app-of-apps/clusters/{{ index .path.segments 3 }}/{{ index .path.segments 4 }}/suite-conf.yml
+              - ../../app-of-apps/clusters/{{ index .path.segments 3 }}/{{ index .path.segments 4 }}/{{ index .path.segments 5 }}/env-conf.yml
+            values: |   # ApplicationSet time
+              app: '{{ .application.name }}'
+              env: '{{ index .path.segments 5 }}'
+              suite: '{{ index .path.segments 4 }}'
+              cluster: '{{ index .path.segments 3 }}'
+              {{ ternary "" (.application.helm.values | toYaml) (empty .application.helm.values) }}
+        - repoURL: "{{ .application.config.repoURL }}"
+          targetRevision: "{{ .application.config.targetRevision }}"
+          ref: values
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true

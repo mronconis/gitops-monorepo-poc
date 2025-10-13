@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: "{{ .Values.name }}"
+  labels:
+    app: "{{ .Values.name }}"
+    env: "{{ .Values.env }}"
+    suite: "{{ .Values.suite }}"
+    cluster: "{{ .Values.cluster }}"
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: "{{ .Values.name }}"
+  template:
+    metadata:
+      labels:
+        app: "{{ .Values.name }}"
+    spec:
+      containers:
+      - name: "{{ .Values.name }}-container"
+        image: quay.io/redhattraining/hello-world-nginx:latest

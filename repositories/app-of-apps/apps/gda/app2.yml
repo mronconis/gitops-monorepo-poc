@@ -1,0 +1,14 @@
+
+application:
+  name: app2
+  config:
+    repoURL: https://github.com/mronconis/gitops-monorepo-poc.git
+    targetRevision: main
+  helm:
+    chart:
+      name: nginx-chart
+      repoURL: https://github.com/mronconis/gitops-monorepo-poc.git
+      path: repositories/config-apps/nginx-chart
+      targetRevision: main
+    values:
+      name: app2
